@@ -1,7 +1,7 @@
+using Shouldly;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Shouldly;
 using Xunit;
 
 namespace MediatR.Tests

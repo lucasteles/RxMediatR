@@ -2,14 +2,13 @@ using System.Threading;
 
 namespace MediatR.Tests
 {
+    using Shouldly;
+    using StructureMap;
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
     using System.Threading.Tasks;
-    using Shouldly;
-    using StructureMap;
-    using StructureMap.Graph;
     using Xunit;
 
     public class PublishTests
@@ -18,6 +17,7 @@ namespace MediatR.Tests
         {
             public string Message { get; set; }
         }
+        class Emit : INotification { }
 
         public class PongHandler : INotificationHandler<Ping>
         {
@@ -50,6 +50,38 @@ namespace MediatR.Tests
         }
 
         [Fact]
+        public async Task Should_emit_notification()
+        {
+            var container = new Container(cfg =>
+            {
+                cfg.Scan(scanner =>
+                {
+                    scanner.AssemblyContainingType(typeof(PublishTests));
+                    scanner.IncludeNamespaceContainingType<Ping>();
+                    scanner.WithDefaultConventions();
+                    scanner.AddAllTypesOf(typeof(INotificationHandler<>));
+                });
+                cfg.For<IMediator>().Use<Mediator>();
+                cfg.For<ServiceFactory>().Use<ServiceFactory>(ctx => t => ctx.GetInstance(t));
+            });
+
+            var mediator = container.GetInstance<IMediator>();
+
+            bool called = false;
+            var notification = new Emit();
+            mediator.Notifications.Subscribe(n =>
+            {
+                if (n == notification)
+                    called = true;
+            });
+
+
+            await mediator.Publish(notification);
+
+            called.ShouldBeTrue();
+
+        }
+        [Fact]
         public async Task Should_resolve_main_handler()
         {
             var builder = new StringBuilder();
@@ -62,7 +94,7 @@ namespace MediatR.Tests
                     scanner.AssemblyContainingType(typeof(PublishTests));
                     scanner.IncludeNamespaceContainingType<Ping>();
                     scanner.WithDefaultConventions();
-                    scanner.AddAllTypesOf(typeof (INotificationHandler<>));
+                    scanner.AddAllTypesOf(typeof(INotificationHandler<>));
                 });
                 cfg.For<TextWriter>().Use(writer);
                 cfg.For<IMediator>().Use<Mediator>();
@@ -73,7 +105,7 @@ namespace MediatR.Tests
 
             await mediator.Publish(new Ping { Message = "Ping" });
 
-            var result = builder.ToString().Split(new [] {Environment.NewLine}, StringSplitOptions.None);
+            var result = builder.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None);
             result.ShouldContain("Ping Pong");
             result.ShouldContain("Ping Pung");
         }
@@ -91,7 +123,7 @@ namespace MediatR.Tests
                     scanner.AssemblyContainingType(typeof(PublishTests));
                     scanner.IncludeNamespaceContainingType<Ping>();
                     scanner.WithDefaultConventions();
-                    scanner.AddAllTypesOf(typeof (INotificationHandler<>));
+                    scanner.AddAllTypesOf(typeof(INotificationHandler<>));
                 });
                 cfg.For<TextWriter>().Use(writer);
                 cfg.For<IMediator>().Use<Mediator>();
@@ -103,7 +135,7 @@ namespace MediatR.Tests
             object message = new Ping { Message = "Ping" };
             await mediator.Publish(message);
 
-            var result = builder.ToString().Split(new [] {Environment.NewLine}, StringSplitOptions.None);
+            var result = builder.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None);
             result.ShouldContain("Ping Pong");
             result.ShouldContain("Ping Pung");
         }
@@ -183,4 +215,5 @@ namespace MediatR.Tests
             result.ShouldContain("Ping Pung");
         }
     }
+
 }

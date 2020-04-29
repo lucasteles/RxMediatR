@@ -5,6 +5,7 @@ namespace MediatR
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Reactive.Linq;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -16,6 +17,8 @@ namespace MediatR
         private readonly ServiceFactory _serviceFactory;
         private static readonly ConcurrentDictionary<Type, object> _requestHandlers = new ConcurrentDictionary<Type, object>();
         private static readonly ConcurrentDictionary<Type, NotificationHandlerWrapper> _notificationHandlers = new ConcurrentDictionary<Type, NotificationHandlerWrapper>();
+
+        public IObservable<INotification> Notifications => NotificationHandlerWrapper.Notifications;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Mediator"/> class.
@@ -35,7 +38,7 @@ namespace MediatR
 
             var requestType = request.GetType();
 
-            var handler = (RequestHandlerWrapper<TResponse>)_requestHandlers.GetOrAdd(requestType,
+            var handler = (RequestHandlerWrapper<TResponse>) _requestHandlers.GetOrAdd(requestType,
                 t => Activator.CreateInstance(typeof(RequestHandlerWrapperImpl<,>).MakeGenericType(requestType, typeof(TResponse))));
 
             return handler.Handle(request, cancellationToken, _serviceFactory);
@@ -110,7 +113,7 @@ namespace MediatR
         {
             var notificationType = notification.GetType();
             var handler = _notificationHandlers.GetOrAdd(notificationType,
-                t => (NotificationHandlerWrapper)Activator.CreateInstance(typeof(NotificationHandlerWrapperImpl<>).MakeGenericType(notificationType)));
+                t => (NotificationHandlerWrapper) Activator.CreateInstance(typeof(NotificationHandlerWrapperImpl<>).MakeGenericType(notificationType)));
 
             return handler.Handle(notification, cancellationToken, _serviceFactory, PublishCore);
         }

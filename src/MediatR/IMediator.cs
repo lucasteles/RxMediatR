@@ -42,5 +42,9 @@ namespace MediatR
         /// <returns>A task that represents the publish operation.</returns>
         Task Publish<TNotification>(TNotification notification, CancellationToken cancellationToken = default)
             where TNotification : INotification;
+
+
+        IObservable<INotification> Notifications { get; }
+
     }
 }
